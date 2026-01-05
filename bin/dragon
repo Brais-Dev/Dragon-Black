@@ -1,0 +1,75 @@
+#!/data/data/com.termux/files/usr/bin/python3
+import subprocess
+import os
+import argparse
+import sys
+from pathlib import Path
+
+# Add the project root to the Python path
+real_path = os.path.realpath(__file__)
+project_root = os.path.abspath(os.path.join(os.path.dirname(real_path), '..'))
+sys.path.insert(0, project_root)
+
+from core.configuration_language import Translator
+from core import updater
+from core.help_system import show_help
+app = Translator()
+
+
+def arguments():
+    # Handle command-line arguments
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+
+        if arg in ["--help", "-h"]:
+            if len(sys.argv) > 2:
+                # Help for specific command
+                show_help(sys.argv[2])
+            else:
+                # General help
+                show_help()
+            sys.exit(0)
+
+        elif arg == "--version":
+            dir_file = os.path.realpath(__file__)
+            file = os.path.abspath(os.path.join(os.path.dirname(dir_file), '../data/version.txt'))
+            sys.path.insert(0, file)
+            with open(file, 'r') as f:
+                line = [lines for lines in f]
+            for li in line:
+                print(f"dragon {li}")
+                sys.exit(0)
+      
+      
+           
+        elif arg == "--update":
+            updater.update_repo()
+            sys.exit(0)
+
+        elif arg == "--update_change":
+            updater.update_change()
+            sys.exit(0)
+
+        elif arg == "--tools":
+            from modules import tools
+            tools.show_tools()
+            sys.exit(0)
+
+        elif arg == "--create-plugin":
+            import subprocess
+            plugin_script = os.path.join(project_root, "utils", "create_plugin.py")
+            if os.path.exists(plugin_script):
+                subprocess.run([sys.executable, plugin_script])
+            else:
+                print("Plugin creation script not found!")
+            sys.exit(0)
+
+        else:
+            print(f"Unknown argument: {arg}")
+            print("Use --help for available options")
+            sys.exit(1)
+arguments()
+dragon_path = os.path.realpath(__file__)
+dragon = os.path.abspath(os.path.join(os.path.dirname(dragon_path), '../dragon.py'))
+sys.path.insert(0, dragon)
+subprocess.run(f"python3 {dragon}", shell=True)

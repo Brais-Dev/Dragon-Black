@@ -1,0 +1,11 @@
+{
+  "name": "test-plugin",
+  "version": "1.0.0",
+  "author": "Dragon-Black Community",
+  "description": "Plugin de prueba para verificar la funcionalidad del repositorio de plugins",
+  "source": "https://github.com/Brais-Dev/test-plugin.git",
+  "git_url": "https://github.com/Brais-Dev/test-plugin.git",
+  "main": "plugin.py",
+  "command": "testcmd",
+  "default_function": "main"
+}

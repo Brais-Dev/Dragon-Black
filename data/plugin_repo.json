@@ -1,0 +1,10 @@
+{
+  "repositories": [
+    {
+      "name": "community",
+      "url": "https://raw.githubusercontent.com/Brais-Dev/Dragon-Black-Plugins/main/plugins.json",
+      "description": "Repositorio de plugins de la comunidad"
+    }
+  ],
+  "local_plugins": []
+}
