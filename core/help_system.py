@@ -62,3 +62,12 @@ def plugin_search_error():
 def drg_argument_error(name_argument):
     print(f"Unknown argument: {name_argument}")
     print("Use --help for available options")
+
+def theme_shell_help():
+    print("theme shell <color> - Change the shell output color and save it permanently")
+    print("\nAvailable colors: black, red, green, yellow, blue, magenta, cyan, white,")
+    print("                     bright_black, bright_red, bright_green, bright_yellow,")
+    print("                     bright_blue, bright_magenta, bright_cyan, bright_white")
+    print("\nExample: theme shell red")
+    print("         theme shell blue")
+    print("         theme shell white")

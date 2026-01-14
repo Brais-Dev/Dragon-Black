@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script de utilidad para crear nuevos plugins de Dragon-Black
+Scrip
 """
 
 import os
@@ -8,35 +8,49 @@ import json
 import sys
 from pathlib import Path
 
+real_path = os.path.realpath(__file__)
+project_root = os.path.abspath(os.path.join(os.path.dirname(real_path), '..'))
+sys.path.insert(0, project_root)
+# Importar el sistema de traducción
+from core.configuration_language import Translator
+app = Translator()
+ 
+
 def create_plugin():
-    print("=== Dragon-Black Plugin Creation Assistant ===\n")
+    print(f"{app.t('plugin_creation_assistant')}\n")
 
     # Pedir información del plugin
-    name = input("Plugin name (no spaces, use hyphens or underscores): ").strip()
+    name = input(app.t("plugin_name_prompt")).strip()
     if not name:
-        print("Plugin name is required.")
+        print(app.t("plugin_name_required"))
         return
 
-    version = input("Plugin version [1.0.0]: ").strip() or "1.0.0"
-    author = input("Plugin author: ").strip()
+    version = input(app.t("plugin_version_prompt")).strip() or "1.0.0"
+    author = input(app.t("plugin_author_prompt")).strip()
     if not author:
-        print("Plugin author is required.")
+        print(app.t("plugin_author_required"))
         return
 
-    description = input("Plugin description: ").strip()
+    description = input(app.t("plugin_description_prompt")).strip()
     if not description:
-        print("Plugin description is required.")
+        print(app.t("plugin_description_required"))
         return
 
-    command = input(f"Main command for the plugin [{name}]: ").strip() or name
+    command = input(app.t("plugin_command_prompt").format(name=name)).strip() or name
 
     # Crear directorio del plugin
     plugin_dir = Path(name)
     if plugin_dir.exists():
-        print(f"Directory {name} already exists. Please choose another name or remove the existing directory.")
+        print(app.t("directory_exists").format(name=name))
         return
 
     plugin_dir.mkdir()
+
+    # Preguntar por dependencias
+    requirements_input = input(app.t("plugin_requirements_prompt")).strip()
+    requirements = []
+    if requirements_input:
+        requirements = [req.strip() for req in requirements_input.split(',') if req.strip()]
 
     # Crear manifest.json
     manifest = {
@@ -51,6 +65,10 @@ def create_plugin():
         "default_function": "main"
     }
 
+    # Agregar requirements solo si hay alguno
+    if requirements:
+        manifest["requirements"] = requirements
+
     with open(plugin_dir / "manifest.json", 'w', encoding='utf-8') as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
 
@@ -59,7 +77,7 @@ def create_plugin():
 # Author: {author}
 # Description: {description}
 """
-libraries required
+Requirements: {", ".join(requirements) if requirements else "None"}
 """
 from typing import Dict, Callable
 import os
@@ -88,12 +106,6 @@ def install():
 """
 This function shows a message when a plugin is removed or uninstalled
 """
-def uninstall():    
-    print("{name} was uninstalled correctly")
-
-"""
-This function shows a message when a plugin is removed or uninstalled
-"""
 def uninstall():
     print("{name} was uninstalled correctly")
 
@@ -109,13 +121,13 @@ def register_commands() -> Dict[str, Callable]:
     with open(plugin_dir / "plugin.py", 'w', encoding='utf-8') as f:
         f.write(plugin_content)
 
-    print(f"\nPlugin '{name}' created successfully!")
-    print(f"Directory: {plugin_dir.absolute()}")
-    print(f"\nNext steps:")
-    print(f"1. Review and modify files in {plugin_dir}/")
-    print(f"2. Test your plugin with: dragon")
-    print(f"3. Install your plugin with: plugin install {plugin_dir.absolute()}")
-    print(f"4. To distribute, upload your plugin to a Git repository")
+    print(f"\n{app.t('plugin_created_success').format(name=name)}")
+    print(f"{app.t('plugin_directory').format(path=plugin_dir.absolute())}")
+    print(f"\n{app.t('next_steps')}")
+    print(f"{app.t('review_files').format(path=plugin_dir)}")
+    print(f"{app.t('test_plugin')}")
+    print(f"{app.t('install_plugin').format(path=plugin_dir.absolute())}")
+    print(f"{app.t('distribute_plugin')}")
 
 if __name__ == "__main__":
     create_plugin()
