@@ -580,6 +580,19 @@ class CommandHandler:
                 print(self.app.get_error_message('package_not_available'))
                 return False
 
+        # Handle theme shell color command
+        if cmd.startswith("theme shell "):
+            color = cmd[12:].strip()  # Get the color after "theme shell "
+            from core.shell import change_shell_color
+            change_shell_color(color)
+            return True
+
+        # Handle theme shell help command
+        if cmd == "theme shell --help" or cmd == "theme shell -h":
+            from core.help_system import theme_shell_help
+            theme_shell_help()
+            return True
+
         # Check if command exists in our registry
         if cmd in self.commands:
             try:

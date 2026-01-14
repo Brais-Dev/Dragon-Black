@@ -4,6 +4,9 @@ Prompt manager with centralized configuration
 Handles user input with autocomplete and themes
 """
 
+import os
+import time
+from datetime import datetime
 from prompt_toolkit import PromptSession
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import InMemoryHistory, FileHistory
@@ -15,13 +18,15 @@ class DragonPromptManager:
     def __init__(self, commands_list, theme="default", use_history=True):
         """
         Initialize prompt manager
-        
+
         Args:
             commands_list: List of commands for autocomplete
             theme: Color theme name
             use_history: Whether to enable command history
         """
         self.ac_manager = AutoCompleteManager(commands_list, theme)
+        # Refresh commands to include external Termux commands
+        self.ac_manager.refresh_commands()
         self.history = self._create_history() if use_history else None
         self.session = self._create_session()
         self.prompt_count = 0
@@ -46,22 +51,153 @@ class DragonPromptManager:
             enable_history_search=True,
             search_ignore_case=True,
         )
+
+    def _format_path(self, path):
+        """
+        Format path to shorten long directory names
+
+        Args:
+            path: Path to format
+
+        Returns:
+            Formatted path with shortened directory names
+        """
+        # Split the path into components
+        if path.startswith("~/"):
+            parts = path.split("/")
+            # Keep the tilde and format the rest
+            formatted_parts = ["~"]
+            # Only process if there are more parts after the tilde
+            if len(parts) > 1:
+                remaining_parts = parts[1:]
+                for i, part in enumerate(remaining_parts):  # Process the parts after tilde
+                    # Always show the last directory completely, otherwise shorten long ones
+                    if part and len(part) > 7 and i < len(remaining_parts) - 1:  # Not the last part
+                        formatted_parts.append(part[:2])
+                    else:
+                        formatted_parts.append(part)
+        elif path.startswith("/"):
+            # Check if path is inside home directory
+            home_dir = os.path.expanduser("~")
+            if path.startswith(home_dir):
+                # Convert to relative path with tilde
+                relative_path = path.replace(home_dir, "~", 1)
+                parts = relative_path.split("/")
+                formatted_parts = ["~"]
+                # Only process if there are more parts after the tilde
+                if len(parts) > 1:
+                    remaining_parts = parts[1:]
+                    for i, part in enumerate(remaining_parts):  # Process the parts after tilde
+                        # Always show the last directory completely, otherwise shorten long ones
+                        if part and len(part) > 7 and i < len(remaining_parts) - 1:  # Not the last part
+                            formatted_parts.append(part[:2] + "..")
+                        else:
+                            formatted_parts.append(part)
+            else:
+                parts = path.split("/")
+                formatted_parts = [""]
+                # Only process if there are more parts after the root slash
+                if len(parts) > 1:
+                    remaining_parts = parts[1:]
+                    for i, part in enumerate(remaining_parts):  # Process the parts after root slash
+                        # Always show the last directory completely, otherwise shorten long ones
+                        if part and len(part) > 7 and i < len(remaining_parts) - 1:  # Not the last part
+                            formatted_parts.append(part[:2])
+                        else:
+                            formatted_parts.append(part)
+        else:
+            # For relative paths
+            parts = path.split("/")
+            formatted_parts = []
+            for i, part in enumerate(parts):
+                # Always show the last directory completely, otherwise shorten long ones
+                if part and len(part) > 7 and i < len(parts) - 1:  # Not the last part
+                    formatted_parts.append(part[:2])
+                else:
+                    formatted_parts.append(part)
+
+        # Join the parts back together
+        return "/".join(formatted_parts)
+
+    def _get_git_branch(self):
+        """
+        Get the current git branch if in a git repository
+
+        Returns:
+            Branch name as string if in a git repo, None otherwise
+        """
+        import subprocess
+        import os
+
+        try:
+            # Check if we're in a git repository
+            result = subprocess.run(
+                ["git", "rev-parse", "--is-inside-work-tree"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=os.getcwd(),
+                timeout=2  # Timeout after 2 seconds
+            )
+
+            if result.returncode == 0 and result.stdout.decode().strip() == "true":
+                # Get the current branch name
+                branch_result = subprocess.run(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=os.getcwd(),
+                    timeout=2
+                )
+
+                if branch_result.returncode == 0:
+                    branch_name = branch_result.stdout.decode().strip()
+                    return branch_name
+        except:
+            # If git command is not available or any other error occurs
+            pass
+
+        return None
     
-    def get_prompt(self, message="dragon@>>> "):
+    def get_prompt(self, message=None):
         """
         Get user input with autocomplete
-        
+
         Args:
-            message: Prompt message to display
-            
+            message: Prompt message to display (if None, uses enhanced prompt)
+
         Returns:
             Command entered by user
         """
         self.prompt_count += 1
-        
+
+        # Create enhanced prompt if no custom message is provided
+        if message is None:
+            current_dir = os.getcwd()
+            home_dir = os.path.expanduser("~")
+
+            # Convert to relative path if in home directory
+            if current_dir.startswith(home_dir):
+                display_dir = current_dir.replace(home_dir, "~", 1)
+            else:
+                display_dir = current_dir
+
+            # Format the directory path to shorten long directory names
+            display_dir = self._format_path(display_dir)
+
+            # Get git branch if in a git repository
+            git_branch = self._get_git_branch()
+            if git_branch:
+                git_info = f"--(  {git_branch})"
+            else:
+                git_info = ""
+
+            # Create multi-line prompt with colors
+            # First line: dragon@[directory] (branch)
+            header_line = HTML(f'<style fg="cyan">dragon</style><style fg="red">[</style><style fg="orange">{display_dir}</style><style fg="red">]</style><style fg="green">{git_info}</style>\n<style fg="yellow">>>> </style>')
+
         # Create colored prompt
-        prompt_html = HTML(f'<style fg="green">{message}</style>')
-        
+        prompt_html = header_line
+
         try:
             user_input = self.session.prompt(prompt_html)
             return user_input.strip()
@@ -158,7 +294,7 @@ class DragonPromptManager:
     def get_stats(self):
         """
         Get usage statistics
-        
+
         Returns:
             Dictionary with statistics
         """
@@ -168,6 +304,18 @@ class DragonPromptManager:
             'theme': self.ac_manager.get_current_theme(),
             'history_entries': self.get_history_count(),
         }
+
+    def refresh_commands(self):
+        """
+        Refresh the command list with both internal and external commands
+
+        Returns:
+            self for method chaining
+        """
+        self.ac_manager.refresh_commands()
+        # Recreate the session to use the updated completer
+        self.session = self._create_session()
+        return self
     
     def create_custom_prompt(self, **kwargs):
         """

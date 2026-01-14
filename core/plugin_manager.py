@@ -4,6 +4,7 @@ Allows community to create and install custom security tools
 """
 import os
 import json
+import sys
 import importlib.util
 import subprocess
 import urllib.request
@@ -50,30 +51,54 @@ class PluginManager:
             plugin_file = plugin_path / "plugin.py"
             if not plugin_file.exists():
                 return False
-            
+
             # Check if manifest.json exists
             manifest_file = plugin_path / "manifest.json"
             if not manifest_file.exists():
                 return False
-            
+
             # Validate manifest structure
             with open(manifest_file, 'r', encoding='utf-8') as f:
                 manifest = json.load(f)
-                
+
             required_fields = ['name', 'version', 'author', 'description', 'main']
             for field in required_fields:
                 if field not in manifest:
                     return False
-                    
+
             return True
         except Exception:
             return False
+
+    def _check_dependencies(self, manifest: dict) -> tuple[bool, list]:
+        """
+        Check if plugin dependencies are satisfied
+
+        Args:
+            manifest: Plugin manifest dictionary
+
+        Returns:
+            Tuple of (are_satisfied, missing_dependencies)
+        """
+        requirements = manifest.get('requirements', [])
+        if not requirements:
+            return True, []
+
+        missing_deps = []
+        for req in requirements:
+            try:
+                # Try to import the module
+                importlib.import_module(req)
+            except ImportError:
+                missing_deps.append(req)
+
+        return len(missing_deps) == 0, missing_deps
     
     def install_plugin(self, plugin_path: str) -> bool:
         """Install a plugin from a local directory or URL"""
         try:
             plugin_dir = Path(plugin_path)
-            
+
             if not plugin_dir.exists():
                 # If it's a URL or git repo, clone it
                 if plugin_path.startswith(('http://', 'https://', 'git@')):
@@ -81,27 +106,49 @@ class PluginManager:
                 else:
                     print(self.app.t("error_package_not_found"))
                     return False
-            
+
             if not self._validate_plugin(plugin_dir):
                 print(self.app.get_error_message("invalid_plugin"))
                 return False
-            
+
             # Load manifest
             manifest_file = plugin_dir / "manifest.json"
             with open(manifest_file, 'r', encoding='utf-8') as f:
                 manifest = json.load(f)
-            
+
+            # Check dependencies before installing
+            deps_satisfied, missing_deps = self._check_dependencies(manifest)
+            if not deps_satisfied:
+                print("")
+                print(self.app.get_error_message("plugin_requires_dependencies"))
+                for depen in missing_deps:
+                    print(f"\033[31m- {depen}\033[0m")
+                    
+                response = input(self.app.t("plugin_ask_install_dependencies"))
+                if response.lower() == 'y':
+                    for dep in missing_deps:
+                        print(f"Installing dependency: {dep}")
+                        try:
+                            subprocess.check_call([sys.executable, '-m', 'pip', 'install', dep])
+                            print(self.app.get_info_message("plugin_dependency_install_success", dep))
+                        except subprocess.CalledProcessError:
+                            print(self.app.get_error_message("plugin_dependency_install_failed", dep))
+                            return False
+                else:
+                    print(self.app.t("plugin_install_cancelled"))
+                    return False
+
             plugin_name = manifest['name']
             target_dir = self.plugins_dir / plugin_name
-            
+
             # Copy plugin to plugins directory
             if target_dir.exists():
                 print(self.app.get_error_message("already_installed", plugin_name))
                 return False
-            
+
             import shutil
             shutil.copytree(plugin_dir, target_dir)
-            
+
             # Register plugin
             self.plugins[plugin_name] = {
                 'path': str(target_dir),
@@ -109,12 +156,12 @@ class PluginManager:
                 'installed': True
             }
             self._save_installed_plugins()
-            
+
             print(self.app.get_error_message("success_installed", plugin_name))
-            
+
             # Try to load the plugin
             self.load_plugin(plugin_name)
-            
+
             return True
         except Exception as e:
             print(f"{self.app.t('enter_error')}: {str(e)}")
@@ -125,38 +172,57 @@ class PluginManager:
         try:
             plugin_name = git_url.split('/')[-1].replace('.git', '')
             target_dir = self.plugins_dir / plugin_name
-            
+
             if target_dir.exists():
                 print(self.app.get_error_message("already_installed", plugin_name))
                 return False
-            
-            subprocess.run(['git', 'clone', git_url, str(target_dir)], 
+
+            subprocess.run(['git', 'clone', git_url, str(target_dir)],
                           check=True, capture_output=True)
-            
+
             if not self._validate_plugin(target_dir):
                 # Clean up if validation fails
                 import shutil
                 shutil.rmtree(target_dir)
                 print(self.app.get_error_message("invalid_plugin"))
                 return False
-            
-            # Register plugin
+
+            # Load manifest
             manifest_file = target_dir / "manifest.json"
             with open(manifest_file, 'r', encoding='utf-8') as f:
                 manifest = json.load(f)
-            
+
+            # Check dependencies before installing
+            deps_satisfied, missing_deps = self._check_dependencies(manifest)
+            if not deps_satisfied:
+                print(self.app.get_error_message("plugin_requires_dependencies", ', '.join(missing_deps)))
+                response = input(self.app.t("plugin_ask_install_dependencies"))
+                if response.lower() == 'y':
+                    for dep in missing_deps:
+                        print(f"Installing dependency: {dep}")
+                        try:
+                            subprocess.check_call([sys.executable, '-m', 'pip', 'install', dep])
+                            print(self.app.get_info_message("plugin_dependency_install_success", dep))
+                        except subprocess.CalledProcessError:
+                            print(self.app.get_error_message("plugin_dependency_install_failed", dep))
+                            return False
+                else:
+                    print(self.app.t("plugin_install_cancelled"))
+                    return False
+
+            # Register plugin
             self.plugins[plugin_name] = {
                 'path': str(target_dir),
                 'manifest': manifest,
                 'installed': True
             }
             self._save_installed_plugins()
-            
+
             print(self.app.get_error_message("success_installed", plugin_name))
-            
+
             # Try to load the plugin
             self.load_plugin(plugin_name)
-            
+
             return True
         except subprocess.CalledProcessError:
             print(self.app.get_error_message("failed_to_install_git", git_url))
@@ -310,11 +376,26 @@ class PluginManager:
         if cmd.startswith("plugin install "):
             plugin_source = cmd[15:].strip()
             return self.install_plugin(plugin_source)
-        
+
         elif cmd.startswith("plugin uninstall "):
             plugin_name = cmd[17:].strip()
             return self.uninstall_plugin(plugin_name)
-        
+
+        elif cmd.startswith("plugin update "):
+            plugin_name = cmd[14:].strip()
+            if plugin_name:
+                # Update specific plugin
+                return self.update_specific_plugin(plugin_name)
+            else:
+                # Update all plugin repositories
+                success = self.update_plugin_repos()
+                return success
+
+        elif cmd == "plugin update":
+            # Update all plugin repositories
+            success = self.update_plugin_repos()
+            return success
+
         elif cmd == "plugin list":
             plugins = self.list_plugins()
             if plugins:
@@ -327,7 +408,7 @@ class PluginManager:
             else:
                 print(self.app.t('no_results'))
             return True
-        
+
         elif cmd.startswith("plugin info "):
             plugin_name = cmd[12:].strip()
             info = self.get_plugin_info(plugin_name)
@@ -342,7 +423,7 @@ class PluginManager:
             else:
                 print(self.app.get_error_message("plugin_not_found", plugin_name))
             return True
-        
+
         # Check if it's a registered plugin command
         if cmd in self.commands:
             try:
@@ -459,6 +540,54 @@ class PluginManager:
             return True
         except Exception as e:
             print(self.app.get_error_message("error_updating_plugin_repositories", str(e)))
+            return False
+
+    def update_specific_plugin(self, plugin_name: str) -> bool:
+        """Update a specific plugin by reinstalling it from its source"""
+        try:
+            if plugin_name not in self.plugins:
+                print(self.app.get_error_message("plugin_not_found", plugin_name))
+                return False
+
+            plugin_info = self.plugins[plugin_name]
+            plugin_path = plugin_info.get('path', '')
+
+            # Get the source URL from the manifest
+            manifest_file = Path(plugin_path) / "manifest.json"
+            if not manifest_file.exists():
+                print(self.app.get_error_message("invalid_plugin"))
+                return False
+
+            with open(manifest_file, 'r', encoding='utf-8') as f:
+                manifest = json.load(f)
+
+            source_url = manifest.get('git_url', manifest.get('source', ''))
+            if not source_url:
+                print(self.app.get_error_message("plugin_no_source_url", plugin_name))
+                return False
+
+            # Remove the current plugin installation
+            import shutil
+            plugin_dir = Path(plugin_path)
+            if plugin_dir.exists():
+                shutil.rmtree(plugin_dir)
+
+            # Remove from registry temporarily
+            del self.plugins[plugin_name]
+            self._save_installed_plugins()
+
+            # Reinstall the plugin from source
+            success = self.install_plugin(source_url)
+
+            if success:
+                print(self.app.get_info_message("success_installed", f"{plugin_name} (updated)"))
+            else:
+                # If reinstall failed, restore the entry in case it still exists elsewhere
+                print(self.app.get_error_message("failed_to_install_from_repository", plugin_name))
+
+            return success
+        except Exception as e:
+            print(f"{self.app.t('enter_error')}: {str(e)}")
             return False
 
 

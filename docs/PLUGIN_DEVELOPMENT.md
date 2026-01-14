@@ -15,7 +15,7 @@ Plugin installation in Dragon-Black CLI is a simple process that allows extendin
 
 ---
 
-## Plugin Development Introduction
+## Introduction to Plugin Development
 
 The Dragon-Black CLI plugin system is a modular architecture that allows extending the main system's functionalities. This feature allows developers and community members to create custom tools that integrate perfectly with the Dragon-Black CLI interface.
 
@@ -24,7 +24,7 @@ The Dragon-Black CLI plugin system is a modular architecture that allows extendi
 - **Extensibility**: Allow adding new functionalities without modifying the core
 - **Community**: Facilitate community contribution with custom tools
 - **Modularity**: Keep the main system clean and organized
-- **Security**: Provide a secure environment for executing external code
+- **Security**: Provide a secure environment for running external code
 - **Integration**: Ensure plugins integrate perfectly with the system
 
 ---
@@ -46,16 +46,16 @@ plugin_name/
 ### Component Description
 
 #### plugin.py
-Main file containing the plugin logic.
+Main file that contains the plugin logic.
 
 #### manifest.json
-File containing essential plugin metadata, such as name, version, author, etc.
+File that contains essential plugin metadata, such as name, version, author, etc.
 
 #### README.md
 Plugin documentation explaining its functionality and usage.
 
 #### LICENSE
-License file defining the plugin usage terms.
+License file that defines the terms of use of the plugin.
 
 ---
 ## Manifest File
@@ -74,7 +74,8 @@ The `manifest.json` file contains certain information about the plugin and must 
   "source": "https://github.com/user/plugin_name",
   "git_url": "https://github.com/user/plugin_name",
   "command": "command_name that executes the plugin",
-  "default_function": "main"
+  "default_function": "main",
+  "requirements": ["list", "of", "dependencies"]
 }
 ```
 
@@ -99,14 +100,18 @@ Name of the main plugin file (usually "plugin.py"), other names are not valid!
 Main command that invokes the plugin.
 
 ### source
-Git repository URL of the plugin.
+URL of the plugin Git repository.
 
 #### git_url (string)
-Git repository URL of the plugin. (same as source)
+URL of the plugin Git repository. (same as source)
 
 #### default_function (string)
 Name of the default function to execute
 default main.
+
+#### requirements (array, optional)
+List of Python dependencies required by the plugin the `requirements` field should only contain dependencies that the plugin may need, separated by commas example
+``["rich","colorama","prompt_toolkit"]`` the Dragon-Black system takes care of verifying that they are Python libraries and installs them if the plugin does not require dependencies the `requirements` field can be optional
 
 ---
 
@@ -119,42 +124,42 @@ The `plugin.py` file must contain:
 ```python
 
 """
-these libraries are imported only as an example, they are not required
+these libraries are imported only as an example, they are not mandatory
 """
 from typing import Dict, Callable
 """
 
 this is the function of our tool
 """
-def my_tool():
+def my_function():
     """
-    implement the logic of our tool here
+    here the logic of our tool is implemented
     """
     print("Hello from my tool!")
 
 
 """
-this function handles calling our tool's function
+this function handles the call to our tool function (Required)
 """
 def main():
     # here the function is called
-    my_tool()
+    my_function()
 
 """
-this function displays a message when a plugin is loaded and installed
+this function displays a message when a plugin is loaded and installed (optional)
 """
 def install():
     print("hydra loaded successfully")
 
 """
-this function handles displaying a message when the plugin is uninstalled
+this function displays a message when the plugin is uninstalled (optional)
 """
 def uninstall():
     print("hydra uninstalled correctly ")
 
-def main_function():
-    print("Main function of the plugin")
-
+"""
+this function creates a dictionary with the command and the function (optional)
+"""
 def register_commands() -> Dict[str, Callable]:
     return {
         "hydra": main_function
@@ -166,29 +171,30 @@ def register_commands() -> Dict[str, Callable]:
 ### Required Functions
 
 #### main()
-Main function that executes when the plugin command is invoked. It is mandatory in all plugins.
+Main function that runs when the plugin command is invoked. It is mandatory in all plugins.
 
 ### Optional Functions
 
 #### register_commands()
-Returns a dictionary with additional commands that the plugin can register.
+Returns a dictionary with additional commands with which the plugin can be executed, it is optional
 
 #### install()
-Executes during plugin installation. Useful for installing dependencies.
+Runs during plugin installation.
 
 #### uninstall()
-Executes during plugin uninstallation. Useful for cleaning up resources.
+Runs during plugin uninstallation.
 
 The functions **install()**, **uninstall()**, **register_commands()** are optional and not mandatory
-**Note** both files must be named `plugin.py` and `manifest.json`
+
+<Note: both files must have the name `plugin.py` and `manifest.json` is necessary for the Dragon-Black system to find them by these names
 
 ### Create plugin easily
-You can easily create a plugin using a tool that Dragon-Black includes.
-The plugin creation tool that Dragon-Black includes helps you fill out the **manifest.json** file and the **plugin.py** file
+You can easily create a plugin using a tool included in Dragon-Black.
+The plugin creation tool included in Dragon-Black helps you fill out the **manifest.json** file and the **plugin.py** file
 
 ### how it works
 the plugin creation tool
-requests the data that manifest.json requires to create the plugin and reloads the **manifest.json**
+requests the data required by `manifest.json` to create the plugin and reloads the **manifest.json** with the requested data. Also, a template is automatically created for the `plugin.py` file
 
 ### how to use
 - 1 inside the termux shell execute the following command
@@ -204,12 +210,12 @@ to create your plugin manually
 - 2 create the plugin.py file
 - 3 create the manifest.json file with the required data
 
-**Note:**
+>**Note:**
 the automatic method saves you a lot of time
 
 
 ## Local Testing of a plugin
-Dragon-Black allows you to test your plugin locally, this is necessary when you are developing the plugin because you need to do tests to ensure the plugin works correctly
+Dragon-Black allows you to test your plugin locally, this is necessary when you are developing the plugin because you need to do tests to ensure that the plugin works correctly
 to install your plugin locally
 you just need to pass the plugin path to Dragon-Black
 
@@ -219,21 +225,19 @@ dragon install <plugin_path>
 the plugin will be installed locally
 
 ## Plugin Distribution
-to distribute your plugin in the official Dragon-Black plugin manager repository you must meet the following requirements
+to distribute your plugin in the official repository of the Dragon-Black plugin manager you must meet the following requirements
 
 - **1 verify functionality:** test the plugin locally
 - **2 verify files** verify that manifest.json contains all the data
 - **3 verify names** verify that the files have the names manifest.json, and plugin.py
 
-once you have everything in order go to the official plugin manager repo
+once you have everything in order go to the official plugin manager repository
 
 [Dragon-Black-Plugins](https://github.com/Brais-Dev/Dragon-Black-Plugins)
 
-once you are in the official repo
+once you are in the official repository
+- **1 fork the repository**
+- **2 create a new branch**
+- **3 make a pull request**
 
-- **1 fork the repo:** github will give you an exact copy of the repo
-- **2 clone the copy that github gave you to the Termux shell**
-- **3 Create a public repo for your plugin**
-- **4 upload your plugin to the repo you created**
-- **5 now move the folder where your plugin is to Dragon-Black-Plugins**
-- **5 make a pull request**
+> **Note** tutorials will be shared on the YouTube channel [Brais Moure](https://www.youtube.com/@Brais-Dev?si=NNuXTcjqGPGISetL)

@@ -48,6 +48,9 @@ from core.plugin_manager import plugin_manager
 plugin_manager.command_handler = command_handler
 load_all_plugins()
 
+# Initialize shell color (this ensures the color file exists and loads properly)
+shell.get_shell_color()
+
 # Suggestions on the screen
 file_command = Path(__file__).parent.parent / "Dragon-Black" / "data"
 options_command = file_command / "command.json"
@@ -59,7 +62,7 @@ prompt_manager = DragonPromptManager(command, theme="dragon")
 
 # main loop
 while True:
-    cmd = prompt_manager.get_prompt("dragon@>>> ")
+    cmd = prompt_manager.get_prompt()
     
     """
     handle customization commands from the main loop because Aki is where the prompt 

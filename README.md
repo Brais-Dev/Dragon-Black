@@ -40,6 +40,8 @@ A powerful tool with intuitive and customizable interface, featuring advanced sy
 
 [System Commands](./docs/COMMANDS.md)
 
+[Full guide](./docs/GUIDE.md)
+
 
 
 

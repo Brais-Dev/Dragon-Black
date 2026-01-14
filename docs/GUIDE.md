@@ -1,15 +1,15 @@
-# Complete Guide on **Dragon-Black**
+# Complete Guide to **Dragon-Black**
 
 ---
 
 ## Introduction
-In this session, you will learn how to use this tool so you can enjoy and get the most out of Termux with this tool
+In this session, you will learn how to use this tool so you can enjoy and make the most of Termux with this tool
 
 ---
 
 ## Introduction to Commands
 
-Dragon-Black CLI provides a complete and professional command system for managing security, development, and automation tools. Commands are organized into logical categories that facilitate their use and understanding.
+Dragon-Black CLI provides a comprehensive and professional command system for managing security tools, development, and automation. Commands are organized into logical categories that facilitate their use and understanding.
 
 ---
 
@@ -43,7 +43,7 @@ Displays the current version of Dragon-Black CLI installed on the system.
 dragon --help
 dragon -h
 ```
-Displays the general help system with a description of the main commands.
+Shows the general help system with a description of the main commands.
 
 ### Update Commands
 
@@ -57,7 +57,7 @@ Updates Dragon-Black CLI to the latest version available in the official reposit
 ```bash
 dragon --update_change
 ```
-Displays the changes included in the next available update.
+Shows the changes included in the next available update.
 
 ### Development Commands
 
@@ -67,7 +67,7 @@ dragon --create-plugin
 ```
 Starts the interactive assistant to create a new plugin with the appropriate structure.
 
-## Package Management Commands
+## Package Management
 
 ---
 
@@ -219,6 +219,26 @@ plugin uninstall old_plugin
 plugin uninstall unnecessary_tool
 ```
 
+### Plugin Updates
+
+#### Update Specific Plugin
+```bash
+plugin update PLUGIN_NAME
+```
+Updates a specific plugin by reinstalling it from its original source.
+
+**Examples:**
+```bash
+plugin update security_tool
+plugin update network_analyzer
+```
+
+#### Update Repositories
+```bash
+plugin update
+```
+Updates the information of the available plugin repositories.
+
 ### Plugin Repository
 
 #### List Available Plugins
@@ -240,12 +260,6 @@ plugin search network
 plugin search analysis
 ```
 
-#### Update Repositories
-```bash
-plugin update
-```
-Updates the information of the available plugin repositories.
-
 ### Plugin Help
 ```bash
 plugin --help
@@ -261,7 +275,7 @@ Displays specific help for plugin management commands.
 ```bash
 theme
 ```
-Starts the interactive theme selector that allows visually choosing from the available themes.
+Starts the interactive theme selector that allows visually choosing among the available themes.
 
 #### List Available Themes
 ```bash
@@ -288,13 +302,46 @@ theme info
 ```
 Displays information about the currently active theme.
 
-### Statistics and Diagnostics
+### Prompt Customization
+
+#### Change Shell Color
+```bash
+theme shell COLOR
+```
+Changes the shell output color and saves it permanently.
+
+**Available colors:**
+- black
+- red
+- green
+- yellow
+- blue
+- magenta
+- cyan
+- white
+- bright_black
+- bright_red
+- bright_green
+- bright_yellow
+- bright_blue
+- bright_magenta
+- bright_cyan
+- bright_white
+
+**Examples:**
+```bash
+theme shell red
+theme shell blue
+theme shell white
+```
+
+### Statistics and Diagnosis
 
 #### View Autocomplete Statistics
 ```bash
 autocomplete stats
 ```
-Displays statistics about the use of the autocomplete system, including used commands and frequency.
+Displays statistics about the autocomplete system usage, including used commands and frequency.
 
 ## Help and Diagnostic Commands
 
@@ -322,7 +369,8 @@ Displays specific help for plugin management commands.
 
 ## Uninstalling Dragon-Black
 Uninstalling or removing **Dragon-Black** from Termux is easy
-simply execute the following command
+just run the following command
 ```bash
 drg uninstall dragon
 ```
+> this will completely remove Dragon-Black from Termux without leaving any trace
